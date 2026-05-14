@@ -9,25 +9,22 @@ RF24 radio(7, 8); // CE, CSN pins on Robot Arduino
 const byte address[6] = "00001";
 
 struct GloveData {
-  int t;
-  int i;
-  int m;
-  int r;
-  int p;
+  int t; int i; int m; int r; int p;
 };
 
-// Start in GLOVE mode for pure hardware testing
-String currentMode = "GLOVE"; 
+// Start in CV mode by default, wait for Python to tell us otherwise
+String currentMode = "CV"; 
 
 void setup() {
   Serial.begin(9600);
   
-  // Attach Servo signal pins
-  thumb.attach(2);
-  indexF.attach(3);
-  middle.attach(4);
-  ring.attach(5);
-  pinky.attach(6);
+  // Attach Servo signal pins 
+  // MATCHING YOUR CIRCUIT DIAGRAM:
+  thumb.attach(5);   // Thumb -> D5
+  indexF.attach(3);  // Index -> D3
+  middle.attach(6);  // Middle -> D6
+  ring.attach(9);    // Ring -> D9
+  pinky.attach(10);  // Pinky -> D10
 
   if (!radio.begin()) {
     Serial.println("ARM NRF24L01 MODULE NOT RESPONDING! Check wiring.");
@@ -42,7 +39,7 @@ void setup() {
 }
 
 void loop() {
-  // 1. Check for commands or Camera Data from the Python script (CV Mode)
+  // 1. Check for commands or Camera Data from the Python script
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
@@ -74,7 +71,7 @@ void loop() {
     }
   }
 
-  // 2. Listen for Wireless Glove Data (GLOVE Mode)
+  // 2. Listen for Glove (When Python script says so)
   if (currentMode == "GLOVE") {
     if (radio.available()) {
       GloveData data;
@@ -86,7 +83,7 @@ void loop() {
       ring.write(data.r);
       pinky.write(data.p);
       
-      // Send to python for updating the Digital Twin simulation
+      // Send to python for simulation update
       Serial.print("GLOVE:");
       Serial.print(data.t); Serial.print(",");
       Serial.print(data.i); Serial.print(",");

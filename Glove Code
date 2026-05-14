@@ -1,0 +1,58 @@
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+RF24 radio(7, 8); // CE, CSN pins
+const byte address[6] = "00001";
+
+// Only defining the Index pin since others are burnt
+const int indexPin = A1;
+
+struct GloveData {
+  int t;
+  int i;
+  int m;
+  int r;
+  int p;
+};
+
+void setup() {
+  Serial.begin(9600);
+  if (!radio.begin()) {
+    Serial.println("GLOVE NRF24L01 MODULE NOT RESPONDING! Check wiring.");
+    while (1) {} // Stop here if radio fails
+  }
+  radio.setAutoAck(true);
+  radio.setRetries(15, 15);
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_MIN); // Use PA_HIGH for longer range
+  radio.stopListening();
+  Serial.println("Glove Radio Initialized Successfully.");
+}
+
+void loop() {
+  GloveData data;
+  
+  // ONLY the Index finger is active
+  data.i = map(analogRead(indexPin), 100, 60, 30, 170); 
+  data.i = constrain(data.i, 30, 170);
+  
+  // Force ALL other burnt/disconnected fingers to stay open (30 degrees)
+  data.t = 30; 
+  data.m = 30; 
+  data.r = 30; 
+  data.p = 30;
+
+  bool ok = radio.write(&data, sizeof(GloveData));
+  
+  // Debugging on the glove side
+  Serial.print("Sending Index: ");
+  Serial.print(data.i);
+  if (ok) {
+    Serial.println("  [TRANSMISSION SUCCESS]");
+  } else {
+    Serial.println("  [TRANSMISSION FAILED]");
+  }
+
+  delay(50); // 20 updates per second
+}
